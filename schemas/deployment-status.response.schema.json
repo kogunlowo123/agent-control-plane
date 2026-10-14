@@ -1,0 +1,122 @@
+{
+  "$defs": {
+    "DriftItem": {
+      "properties": {
+        "actual": {
+          "default": null,
+          "title": "Actual"
+        },
+        "change": {
+          "description": "missing | changed | unexpected | absent",
+          "title": "Change",
+          "type": "string"
+        },
+        "expected": {
+          "default": null,
+          "title": "Expected"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "path",
+        "change"
+      ],
+      "title": "DriftItem",
+      "type": "object"
+    },
+    "Phase": {
+      "enum": [
+        "PendingApproval",
+        "Progressing",
+        "Available",
+        "Killed",
+        "Degraded",
+        "Deleted"
+      ],
+      "title": "Phase",
+      "type": "string"
+    }
+  },
+  "$id": "https://github.com/kogunlowo123/agent-control-plane/schemas/deployment-status.response.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "corrected": {
+      "default": false,
+      "title": "Corrected",
+      "type": "boolean"
+    },
+    "desired_replicas": {
+      "default": 0,
+      "title": "Desired Replicas",
+      "type": "integer"
+    },
+    "drift": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/DriftItem"
+      },
+      "title": "Drift",
+      "type": "array"
+    },
+    "killed_by": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Killed By",
+      "type": "array"
+    },
+    "message": {
+      "default": "",
+      "title": "Message",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "observed_generation": {
+      "default": 0,
+      "title": "Observed Generation",
+      "type": "integer"
+    },
+    "phase": {
+      "$ref": "#/$defs/Phase"
+    },
+    "ready_replicas": {
+      "default": 0,
+      "title": "Ready Replicas",
+      "type": "integer"
+    },
+    "reconciled_at": {
+      "format": "date-time",
+      "title": "Reconciled At",
+      "type": "string"
+    },
+    "spec_hash": {
+      "default": "",
+      "title": "Spec Hash",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "phase",
+    "reconciled_at"
+  ],
+  "title": "DeploymentStatus",
+  "type": "object"
+}

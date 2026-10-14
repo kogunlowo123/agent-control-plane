@@ -1,0 +1,69 @@
+{
+  "$defs": {
+    "RiskLevel": {
+      "description": "Action risk tier. Ordered so policies can compare with ``>=``.",
+      "enum": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "title": "RiskLevel",
+      "type": "integer"
+    }
+  },
+  "$id": "https://github.com/kogunlowo123/agent-control-plane/schemas/create-tool.request.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "description": {
+      "maxLength": 2000,
+      "minLength": 10,
+      "title": "Description",
+      "type": "string"
+    },
+    "endpoint": {
+      "maxLength": 500,
+      "pattern": "^https://[^\\s]+$",
+      "title": "Endpoint",
+      "type": "string"
+    },
+    "input_schema": {
+      "additionalProperties": true,
+      "description": "JSON Schema of the tool input; pinned by digest",
+      "title": "Input Schema",
+      "type": "object"
+    },
+    "name": {
+      "pattern": "^[a-z][a-z0-9_.\\-]{1,63}$",
+      "title": "Name",
+      "type": "string"
+    },
+    "owner": {
+      "maxLength": 200,
+      "minLength": 3,
+      "title": "Owner",
+      "type": "string"
+    },
+    "risk": {
+      "$ref": "#/$defs/RiskLevel"
+    },
+    "version": {
+      "maxLength": 23,
+      "minLength": 5,
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "description",
+    "owner",
+    "risk",
+    "endpoint",
+    "input_schema"
+  ],
+  "title": "CreateTool",
+  "type": "object"
+}

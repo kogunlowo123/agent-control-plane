@@ -1,0 +1,43 @@
+{
+  "$id": "https://github.com/kogunlowo123/agent-control-plane/schemas/publish-policy-bundle.request.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "description": {
+      "default": "",
+      "maxLength": 2000,
+      "title": "Description",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "policies": {
+      "description": "agentic-core PolicySet documents",
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "maxItems": 20,
+      "minItems": 1,
+      "title": "Policies",
+      "type": "array"
+    },
+    "version": {
+      "maxLength": 23,
+      "minLength": 5,
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "policies"
+  ],
+  "title": "PublishBundle",
+  "type": "object"
+}

@@ -1,0 +1,66 @@
+{
+  "$id": "https://github.com/kogunlowo123/agent-control-plane/schemas/runtime-status.response.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "What an agent runtime checks before each run.",
+  "properties": {
+    "deployment": {
+      "title": "Deployment",
+      "type": "string"
+    },
+    "identity": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Identity"
+    },
+    "killed_by": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Killed By",
+      "type": "array"
+    },
+    "policy_bundle": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Policy Bundle"
+    },
+    "run_permitted": {
+      "description": "False while a kill switch covers the deployment",
+      "title": "Run Permitted",
+      "type": "boolean"
+    },
+    "version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Version"
+    }
+  },
+  "required": [
+    "deployment",
+    "run_permitted",
+    "killed_by",
+    "version",
+    "policy_bundle",
+    "identity"
+  ],
+  "title": "RuntimeStatus",
+  "type": "object"
+}

@@ -1,0 +1,94 @@
+{
+  "title": "Agent Control Plane",
+  "uid": "agent-control-plane",
+  "schemaVersion": 39,
+  "time": {"from": "now-6h", "to": "now"},
+  "templating": {
+    "list": [
+      {"name": "datasource", "type": "datasource", "query": "prometheus"}
+    ]
+  },
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "API success (5m)",
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "decimals": 3}},
+      "targets": [{"expr": "1 - acp:request_errors:ratio_5m"}]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Kill switches active",
+      "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "targets": [{"expr": "max(acp_kill_switches_active)"}]
+    },
+    {
+      "id": 3, "type": "stat", "title": "Reconciler leader / cluster reachable",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 4},
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "targets": [
+        {"expr": "max(acp_reconciler_leader)", "legendFormat": "leader"},
+        {"expr": "max(acp_cluster_reachable)", "legendFormat": "cluster"}
+      ]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Deployments by phase",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "targets": [{"expr": "sum by (phase) (acp_deployments)", "legendFormat": "{{phase}}"}]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Drift corrected by kind and change",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "targets": [{"expr": "sum by (kind, change) (increase(acp_drift_detected_total[15m]))", "legendFormat": "{{kind}} {{change}}"}]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Reconcile duration p50 / p99",
+      "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.5, sum by (le) (rate(acp_reconcile_duration_seconds_bucket[5m])))", "legendFormat": "p50"},
+        {"expr": "histogram_quantile(0.99, sum by (le) (rate(acp_reconcile_duration_seconds_bucket[5m])))", "legendFormat": "p99"}
+      ]
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "Reconcile errors",
+      "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "targets": [{"expr": "sum by (error) (rate(acp_reconcile_errors_total[5m]))", "legendFormat": "{{error}}"}]
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "Agent authorization decisions (MCP, A2A, runtime)",
+      "gridPos": {"x": 0, "y": 20, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "targets": [{"expr": "sum by (surface, decision) (rate(acp_authorization_decisions_total[5m]))", "legendFormat": "{{surface}} {{decision}}"}]
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "MCP tool calls and A2A requests",
+      "gridPos": {"x": 12, "y": 20, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "targets": [
+        {"expr": "sum by (tool, outcome) (rate(acp_mcp_tool_calls_total[5m]))", "legendFormat": "mcp {{tool}} {{outcome}}"},
+        {"expr": "sum by (outcome) (rate(acp_a2a_requests_total[5m]))", "legendFormat": "a2a {{outcome}}"}
+      ]
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "Registry lifecycle and kill-switch events",
+      "gridPos": {"x": 0, "y": 28, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "targets": [
+        {"expr": "sum by (entity, event) (increase(acp_registry_events_total[1h]))", "legendFormat": "{{entity}} {{event}}"},
+        {"expr": "sum by (event, scope) (increase(acp_kill_switch_events_total[1h]))", "legendFormat": "kill {{event}} {{scope}}"}
+      ]
+    },
+    {
+      "id": 11, "type": "timeseries", "title": "p99 latency by route",
+      "gridPos": {"x": 12, "y": 28, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [{"expr": "histogram_quantile(0.99, sum by (le, route) (rate(acp_http_request_duration_seconds_bucket[5m])))", "legendFormat": "{{route}}"}]
+    }
+  ]
+}

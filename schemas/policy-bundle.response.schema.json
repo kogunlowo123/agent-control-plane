@@ -1,0 +1,67 @@
+{
+  "$id": "https://github.com/kogunlowo123/agent-control-plane/schemas/policy-bundle.response.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Versioned, signed set of agentic-core policy sets distributed to agents.",
+  "properties": {
+    "description": {
+      "default": "",
+      "maxLength": 2000,
+      "title": "Description",
+      "type": "string"
+    },
+    "digest": {
+      "title": "Digest",
+      "type": "string"
+    },
+    "key_id": {
+      "title": "Key Id",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "policies": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "minItems": 1,
+      "title": "Policies",
+      "type": "array"
+    },
+    "published_at": {
+      "format": "date-time",
+      "title": "Published At",
+      "type": "string"
+    },
+    "published_by": {
+      "title": "Published By",
+      "type": "string"
+    },
+    "signature": {
+      "title": "Signature",
+      "type": "string"
+    },
+    "version": {
+      "maxLength": 23,
+      "minLength": 5,
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "policies",
+    "digest",
+    "signature",
+    "key_id",
+    "published_by",
+    "published_at"
+  ],
+  "title": "PolicyBundle",
+  "type": "object"
+}

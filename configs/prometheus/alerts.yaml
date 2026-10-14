@@ -1,0 +1,111 @@
+# PrometheusRule-compatible alert rules. Load with the Prometheus Operator
+# (wrap in a PrometheusRule) or a rule_files entry.
+# SLOs (docs/architecture/agent-specification.md):
+#   availability   99.9% of control-plane API requests succeed (non-5xx)
+#   kill switch    engagement reaches the cluster within 30 s (p99)
+#   convergence    no deployment Degraded for more than 10 minutes
+#   drift          out-of-band changes corrected within one reconcile interval
+groups:
+  - name: agent-control-plane.slo
+    rules:
+      - record: acp:request_errors:ratio_5m
+        expr: |
+          sum(rate(acp_http_request_duration_seconds_count{status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(acp_http_request_duration_seconds_count[5m])), 1e-9)
+
+      - alert: ControlPlaneErrorBudgetBurnFast
+        expr: acp:request_errors:ratio_5m > (14.4 * 0.001)
+        for: 5m
+        labels: {severity: page}
+        annotations:
+          summary: Control plane burning its error budget 14x faster than sustainable
+          runbook: docs/runbooks/incident-response.md#elevated-5xx
+
+      - alert: ControlPlaneKillSwitchSlow
+        expr: |
+          histogram_quantile(0.99, sum by (le) (
+            rate(acp_http_request_duration_seconds_bucket{route="/v1/kill-switches",method="POST"}[15m])
+          )) > 30
+        for: 5m
+        labels: {severity: page}
+        annotations:
+          summary: Kill switch engagement p99 above 30 s
+          runbook: docs/runbooks/kill-switch.md#slow-engagement
+
+  - name: agent-control-plane.reconciliation
+    rules:
+      - alert: DeploymentsDegraded
+        expr: sum(acp_deployments{phase="Degraded"}) > 0
+        for: 10m
+        labels: {severity: page}
+        annotations:
+          summary: One or more agent deployments cannot be reconciled
+          runbook: docs/runbooks/incident-response.md#degraded-deployments
+
+      - alert: ReconcileErrorsSustained
+        expr: sum(rate(acp_reconcile_errors_total[10m])) > 0.05
+        for: 15m
+        labels: {severity: ticket}
+        annotations:
+          summary: Sustained reconcile failures
+          runbook: docs/runbooks/monitoring.md#reconcile-errors
+
+      - alert: OutOfBandChangesDetected
+        expr: sum(increase(acp_drift_detected_total[30m])) > 0
+        labels: {severity: ticket}
+        annotations:
+          summary: Managed agent objects were changed outside the control plane (drift corrected)
+          runbook: docs/runbooks/incident-response.md#drift
+
+      - alert: PrivilegedDriftDetected
+        expr: sum(increase(acp_drift_detected_total{change="unexpected",kind="Deployment"}[10m])) > 0
+        labels: {severity: page}
+        annotations:
+          summary: Containers, host namespaces or privileges were added to an agent workload
+          runbook: docs/runbooks/incident-response.md#drift
+
+      - alert: NoReconcilerLeader
+        expr: max(acp_reconciler_leader) < 1
+        for: 5m
+        labels: {severity: page}
+        annotations:
+          summary: No replica holds the reconciler lease; periodic drift correction stopped
+          runbook: docs/runbooks/monitoring.md#no-leader
+
+      - alert: ClusterUnreachable
+        expr: max(acp_cluster_reachable) < 1 and max(acp_reconciler_leader) == 1
+        for: 5m
+        labels: {severity: page}
+        annotations:
+          summary: The reconciler cannot reach the Kubernetes API
+          runbook: docs/runbooks/incident-response.md#cluster-unreachable
+
+  - name: agent-control-plane.safety
+    rules:
+      - alert: KillSwitchActive
+        expr: max(acp_kill_switches_active) > 0
+        for: 1m
+        labels: {severity: info}
+        annotations:
+          summary: A kill switch is engaged; agents are stopped until a second officer releases it
+          runbook: docs/runbooks/kill-switch.md
+
+      - alert: AgentAuthorizationDenySpike
+        expr: |
+          sum(rate(acp_authorization_decisions_total{decision="deny"}[10m]))
+          /
+          clamp_min(sum(rate(acp_authorization_decisions_total[10m])), 1e-9) > 0.2
+        for: 15m
+        labels: {severity: ticket}
+        annotations:
+          summary: More than 20% of agent calls to MCP/A2A/runtime are denied
+          runbook: docs/runbooks/incident-response.md#deny-spike
+
+      - alert: ControlPlaneReplicasDown
+        expr: sum(up{job="agent-control-plane"}) < 1
+        for: 5m
+        labels: {severity: page}
+        annotations:
+          summary: No control-plane replica is being scraped
+          runbook: docs/runbooks/incident-response.md#replicas-down

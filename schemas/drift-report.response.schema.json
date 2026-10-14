@@ -1,0 +1,88 @@
+{
+  "$defs": {
+    "DriftItem": {
+      "properties": {
+        "actual": {
+          "default": null,
+          "title": "Actual"
+        },
+        "change": {
+          "description": "missing | changed | unexpected | absent",
+          "title": "Change",
+          "type": "string"
+        },
+        "expected": {
+          "default": null,
+          "title": "Expected"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "path",
+        "change"
+      ],
+      "title": "DriftItem",
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/kogunlowo123/agent-control-plane/schemas/drift-report.response.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "drift": {
+      "items": {
+        "$ref": "#/$defs/DriftItem"
+      },
+      "title": "Drift",
+      "type": "array"
+    },
+    "in_sync": {
+      "title": "In Sync",
+      "type": "boolean"
+    },
+    "killed_by": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Killed By",
+      "type": "array"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "pending_rollout": {
+      "items": {
+        "$ref": "#/$defs/DriftItem"
+      },
+      "title": "Pending Rollout",
+      "type": "array"
+    },
+    "spec_hash": {
+      "title": "Spec Hash",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "spec_hash",
+    "in_sync",
+    "drift",
+    "pending_rollout",
+    "killed_by"
+  ],
+  "title": "DriftReport",
+  "type": "object"
+}

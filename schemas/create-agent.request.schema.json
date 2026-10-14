@@ -1,0 +1,110 @@
+{
+  "$defs": {
+    "DataClassification": {
+      "description": "Sensitivity label. Ordered from least to most restricted.",
+      "enum": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "title": "DataClassification",
+      "type": "integer"
+    },
+    "Owners": {
+      "additionalProperties": false,
+      "properties": {
+        "business": {
+          "maxLength": 200,
+          "minLength": 3,
+          "title": "Business",
+          "type": "string"
+        },
+        "escalation_contact": {
+          "maxLength": 200,
+          "minLength": 3,
+          "title": "Escalation Contact",
+          "type": "string"
+        },
+        "technical": {
+          "maxLength": 200,
+          "minLength": 3,
+          "title": "Technical",
+          "type": "string"
+        }
+      },
+      "required": [
+        "business",
+        "technical",
+        "escalation_contact"
+      ],
+      "title": "Owners",
+      "type": "object"
+    },
+    "RiskLevel": {
+      "description": "Action risk tier. Ordered so policies can compare with ``>=``.",
+      "enum": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "title": "RiskLevel",
+      "type": "integer"
+    }
+  },
+  "$id": "https://github.com/kogunlowo123/agent-control-plane/schemas/create-agent.request.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "disallowed_actions": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 50,
+      "title": "Disallowed Actions",
+      "type": "array"
+    },
+    "display_name": {
+      "maxLength": 120,
+      "minLength": 3,
+      "title": "Display Name",
+      "type": "string"
+    },
+    "max_classification": {
+      "$ref": "#/$defs/DataClassification"
+    },
+    "mission": {
+      "maxLength": 2000,
+      "minLength": 10,
+      "title": "Mission",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "namespace": {
+      "title": "Namespace",
+      "type": "string"
+    },
+    "owners": {
+      "$ref": "#/$defs/Owners"
+    },
+    "risk": {
+      "$ref": "#/$defs/RiskLevel"
+    }
+  },
+  "required": [
+    "namespace",
+    "name",
+    "display_name",
+    "mission",
+    "owners",
+    "risk",
+    "max_classification"
+  ],
+  "title": "CreateAgent",
+  "type": "object"
+}

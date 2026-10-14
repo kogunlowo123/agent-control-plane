@@ -1,0 +1,154 @@
+{
+  "$defs": {
+    "Approval": {
+      "properties": {
+        "actor": {
+          "title": "Actor",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "title": "At",
+          "type": "string"
+        },
+        "comment": {
+          "default": "",
+          "title": "Comment",
+          "type": "string"
+        },
+        "policy_digest": {
+          "default": "",
+          "title": "Policy Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actor",
+        "at"
+      ],
+      "title": "Approval",
+      "type": "object"
+    },
+    "Lifecycle": {
+      "enum": [
+        "draft",
+        "in_review",
+        "approved",
+        "deprecated",
+        "retired"
+      ],
+      "title": "Lifecycle",
+      "type": "string"
+    },
+    "RiskLevel": {
+      "description": "Action risk tier. Ordered so policies can compare with ``>=``.",
+      "enum": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "title": "RiskLevel",
+      "type": "integer"
+    }
+  },
+  "$id": "https://github.com/kogunlowo123/agent-control-plane/schemas/tool.response.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "A tool agents may call, pinned by the digest of its input schema.",
+  "properties": {
+    "approvals": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Approval"
+      },
+      "title": "Approvals",
+      "type": "array"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "created_by": {
+      "title": "Created By",
+      "type": "string"
+    },
+    "description": {
+      "maxLength": 2000,
+      "minLength": 10,
+      "title": "Description",
+      "type": "string"
+    },
+    "endpoint": {
+      "description": "MCP server URL (HTTPS)",
+      "pattern": "^https://[^\\s]+$",
+      "title": "Endpoint",
+      "type": "string"
+    },
+    "input_schema": {
+      "additionalProperties": true,
+      "title": "Input Schema",
+      "type": "object"
+    },
+    "name": {
+      "pattern": "^[a-z][a-z0-9_.\\-]{1,63}$",
+      "title": "Name",
+      "type": "string"
+    },
+    "owner": {
+      "maxLength": 200,
+      "minLength": 3,
+      "title": "Owner",
+      "type": "string"
+    },
+    "risk": {
+      "$ref": "#/$defs/RiskLevel"
+    },
+    "schema_digest": {
+      "title": "Schema Digest",
+      "type": "string"
+    },
+    "state": {
+      "$ref": "#/$defs/Lifecycle",
+      "default": "draft"
+    },
+    "submitted_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Submitted By"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "version": {
+      "maxLength": 23,
+      "minLength": 5,
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "description",
+    "owner",
+    "risk",
+    "endpoint",
+    "input_schema",
+    "schema_digest",
+    "created_by",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "ToolVersion",
+  "type": "object"
+}

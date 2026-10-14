@@ -1,0 +1,25 @@
+# Values used by CI to render and schema-validate the chart (helm lint,
+# helm template | kubeconform). They describe a complete, valid deployment.
+controlPlane:
+  publicUrl: https://acp.agents.ci.internal
+  managedNamespaces: [agents-ci, agents-ci-staging]
+  operator:
+    issuer: https://login.ci.internal
+    audience: agent-control-plane
+    jwksUrl: https://login.ci.internal/jwks
+  fabric:
+    enabled: true
+    url: https://identity.agents.ci.internal
+    trustDomain: agents.ci.internal
+    clusterOidcIssuer: https://oidc.eks.us-east-1.amazonaws.com/id/CI
+    adminTokenUrl: https://login.ci.internal/oauth2/token
+    adminClientId: agent-control-plane-ci
+secrets:
+  auditKeyFile: audit-2026-10.pem
+  bundleKeyFile: bundle-2026-10.pem
+ingress:
+  enabled: true
+  className: nginx
+  host: acp.agents.ci.internal
+serviceMonitor:
+  enabled: true

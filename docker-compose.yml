@@ -1,0 +1,74 @@
+# Local development stack: control plane + PostgreSQL + an OIDC provider for
+# operator tokens + an OTel collector, reconciling into a local kind cluster.
+#
+#   kind create cluster --name acp
+#   kind get kubeconfig --name acp --internal > .kind-kubeconfig
+#   kubectl create namespace agents-dev
+#   KIND_KUBECONFIG=$PWD/.kind-kubeconfig docker compose up --build
+#
+# The control plane joins kind's Docker network so the internal API server
+# address in that kubeconfig resolves. Signing keys are generated in memory
+# (ACP_DEV_EPHEMERAL_KEYS); never use this configuration outside a developer
+# workstation.
+name: agent-control-plane
+
+services:
+  postgres:
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_DB: acp
+      POSTGRES_USER: acp
+      POSTGRES_PASSWORD: acp-local-only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U acp -d acp"]
+      interval: 5s
+      retries: 10
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  oidc:
+    image: ghcr.io/navikt/mock-oauth2-server:2.1.10
+    environment:
+      SERVER_PORT: "8080"
+    ports:
+      - "8081:8080"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./deployments/docker/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+
+  control-plane:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      oidc:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    networks: [default, kind]
+    volumes:
+      - ${KIND_KUBECONFIG:?set KIND_KUBECONFIG to the kubeconfig from 'kind get kubeconfig --internal'}:/etc/acp-kube/config:ro
+    environment:
+      ACP_ENVIRONMENT: development
+      ACP_DEV_EPHEMERAL_KEYS: "true"
+      ACP_PUBLIC_URL: http://localhost:8080
+      ACP_DATABASE_URL: postgresql+asyncpg://acp:acp-local-only@postgres:5432/acp
+      ACP_OPERATOR_ISSUER: http://oidc:8080/operator
+      ACP_OPERATOR_AUDIENCE: agent-control-plane
+      ACP_OPERATOR_JWKS_URL: http://oidc:8080/operator/jwks
+      ACP_MANAGED_NAMESPACES: '["agents-dev"]'
+      ACP_KUBE_MODE: kubeconfig
+      ACP_KUBECONFIG_PATH: /etc/acp-kube/config
+      ACP_RECONCILE_INTERVAL_S: "15"
+      ACP_OTLP_ENDPOINT: http://otel-collector:4317
+      ACP_LOG_LEVEL: DEBUG
+
+networks:
+  kind:
+    external: true
+
+volumes:
+  pgdata:

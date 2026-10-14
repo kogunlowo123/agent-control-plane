@@ -1,0 +1,183 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --python ${{ matrix.python }}
+      - name: Lint and format
+        run: |
+          uv run ruff check src tests
+          uv run black --check src tests
+      - name: Type check
+        run: uv run mypy
+      - name: Static security analysis
+        run: uv run python -m bandit -q -r src -c pyproject.toml
+      - name: Published contracts are current
+        run: uv run python -m agent_control_plane.contracts --check
+      - name: Unit, security, chaos, performance and e2e tests (coverage gate 90%)
+        run: uv run pytest --cov-report=xml
+      - uses: actions/upload-artifact@v4
+        if: matrix.python == '3.12'
+        with:
+          name: coverage
+          path: coverage.xml
+
+  integration-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.4-alpine
+        env:
+          POSTGRES_DB: acp
+          POSTGRES_USER: acp
+          POSTGRES_PASSWORD: ci-only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U acp" --health-interval 5s --health-retries 10
+    env:
+      ACP_TEST_DATABASE_URL: postgresql+asyncpg://acp:ci-only@localhost:5432/acp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v10.3.0
+      - run: uv sync --frozen
+      - run: uv run pytest tests/integration -m integration --no-cov -ra
+
+  deploy-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+      - name: Helm lint and render
+        run: |
+          helm lint deployments/helm/agent-control-plane \
+            -f deployments/helm/agent-control-plane/ci/test-values.yaml
+          helm template acp deployments/helm/agent-control-plane \
+            -f deployments/helm/agent-control-plane/ci/test-values.yaml > rendered.yaml
+          if helm template acp deployments/helm/agent-control-plane > /dev/null 2>&1; then
+            echo "chart rendered without required values"; exit 1
+          fi
+      - name: Kubernetes schema validation (kubeconform)
+        run: |
+          curl -sSfL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz
+          ./kubeconform -strict -summary -ignore-missing-schemas \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            rendered.yaml deployments/kubernetes/namespaces.yaml deployments/kubernetes/external-secrets.yaml
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+      - name: Terraform fmt and validate (aws, azure, gcp)
+        run: |
+          terraform fmt -recursive -check deployments/terraform
+          for cloud in aws azure gcp; do
+            terraform -chdir=deployments/terraform/$cloud init -backend=false -input=false
+            terraform -chdir=deployments/terraform/$cloud validate
+          done
+      - name: IaC and Kubernetes misconfiguration scan (Trivy)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: deployments
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t agent-control-plane:ci .
+      - name: Container smoke test (starts, reports ready, serves A2A and MCP)
+        run: |
+          mkdir -p ci-kube
+          cat > ci-kube/config <<'KUBECONFIG'
+          apiVersion: v1
+          kind: Config
+          clusters:
+            - name: ci
+              cluster: {server: "https://127.0.0.1:6443", insecure-skip-tls-verify: true}
+          contexts:
+            - name: ci
+              context: {cluster: ci, user: ci}
+          current-context: ci
+          users:
+            - name: ci
+              user: {token: ci-smoke-test}
+          KUBECONFIG
+          chmod 0644 ci-kube/config
+          docker run -d --name acp -p 8080:8080 \
+            -v "$PWD/ci-kube:/etc/acp-kube:ro" \
+            -e ACP_ENVIRONMENT=ci -e ACP_DEV_EPHEMERAL_KEYS=true \
+            -e ACP_PUBLIC_URL=http://localhost:8080 \
+            -e ACP_DATABASE_URL=sqlite+aiosqlite:////tmp/acp.db \
+            -e ACP_OPERATOR_ISSUER=https://login.ci.internal \
+            -e ACP_OPERATOR_AUDIENCE=agent-control-plane \
+            -e ACP_OPERATOR_JWKS_URL=https://login.ci.internal/jwks \
+            -e 'ACP_MANAGED_NAMESPACES=["agents-ci"]' \
+            -e ACP_KUBE_MODE=kubeconfig -e ACP_KUBECONFIG_PATH=/etc/acp-kube/config \
+            agent-control-plane:ci
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/readyz && break; sleep 1
+          done
+          curl -sf http://localhost:8080/readyz
+          curl -sf http://localhost:8080/.well-known/agent-card.json | grep -q 'Agent Control Plane'
+          curl -sf -X POST http://localhost:8080/mcp/ \
+            -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | grep -q engage_kill_switch
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/v1/agents)" = "401"
+          docker inspect --format '{{.Config.User}}' agent-control-plane:ci | grep -q 10001
+          docker logs acp
+      - name: Image vulnerability scan (Trivy)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: agent-control-plane:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Image SBOM (Syft)
+        uses: anchore/sbom-action@v0.24.3
+        with:
+          image: agent-control-plane:ci
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+      - name: SBOM vulnerability gate (Grype)
+        uses: anchore/scan-action@v7.4.2
+        with:
+          sbom: sbom.cdx.json
+          fail-build: true
+          severity-cutoff: high
+          only-fixed: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.cdx.json
+
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep:1.95.0
+    steps:
+      - uses: actions/checkout@v4
+      - run: semgrep scan --config p/python --config p/secrets --config p/dockerfile --error --metrics=off src Dockerfile

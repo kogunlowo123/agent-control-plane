@@ -1,0 +1,118 @@
+{
+  "$defs": {
+    "BundleRef": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 23,
+          "minLength": 5,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "BundleRef",
+      "type": "object"
+    },
+    "Environment": {
+      "enum": [
+        "development",
+        "staging",
+        "production"
+      ],
+      "title": "Environment",
+      "type": "string"
+    }
+  },
+  "$id": "https://github.com/kogunlowo123/agent-control-plane/schemas/apply-deployment.request.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "agent_name": {
+      "title": "Agent Name",
+      "type": "string"
+    },
+    "agent_namespace": {
+      "title": "Agent Namespace",
+      "type": "string"
+    },
+    "env": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "maxProperties": 50,
+      "title": "Env",
+      "type": "object"
+    },
+    "environment": {
+      "$ref": "#/$defs/Environment"
+    },
+    "ingress_namespaces": {
+      "default": [],
+      "items": {
+        "maxLength": 40,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 20,
+      "title": "Ingress Namespaces",
+      "type": "array"
+    },
+    "name": {
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "namespace": {
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Namespace",
+      "type": "string"
+    },
+    "policy_bundle": {
+      "$ref": "#/$defs/BundleRef"
+    },
+    "replicas": {
+      "default": 2,
+      "maximum": 50,
+      "minimum": 0,
+      "title": "Replicas",
+      "type": "integer"
+    },
+    "service_account_annotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "maxProperties": 20,
+      "title": "Service Account Annotations",
+      "type": "object"
+    },
+    "version": {
+      "maxLength": 23,
+      "minLength": 5,
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "agent_namespace",
+    "agent_name",
+    "environment",
+    "namespace",
+    "version",
+    "policy_bundle"
+  ],
+  "title": "ApplyDeployment",
+  "type": "object"
+}

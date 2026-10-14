@@ -1,0 +1,123 @@
+{
+  "$defs": {
+    "DataClassification": {
+      "description": "Sensitivity label. Ordered from least to most restricted.",
+      "enum": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "title": "DataClassification",
+      "type": "integer"
+    },
+    "RunMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "maxLength": 100000,
+          "minLength": 1,
+          "title": "Content",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "user",
+            "assistant"
+          ],
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "content"
+      ],
+      "title": "RunMessage",
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/kogunlowo123/agent-control-plane/schemas/run.request.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "classification": {
+      "$ref": "#/$defs/DataClassification",
+      "default": 1
+    },
+    "deployment": {
+      "pattern": "^[a-z0-9]([-a-z0-9]{0,38}[a-z0-9])?$",
+      "title": "Deployment",
+      "type": "string"
+    },
+    "max_steps": {
+      "default": 25,
+      "description": "Step / tool-call budget",
+      "maximum": 500,
+      "minimum": 1,
+      "title": "Max Steps",
+      "type": "integer"
+    },
+    "messages": {
+      "items": {
+        "$ref": "#/$defs/RunMessage"
+      },
+      "maxItems": 200,
+      "minItems": 1,
+      "title": "Messages",
+      "type": "array"
+    },
+    "metadata": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Metadata",
+      "type": "object"
+    },
+    "parameters": {
+      "additionalProperties": true,
+      "description": "Structured inputs",
+      "title": "Parameters",
+      "type": "object"
+    },
+    "run_id": {
+      "pattern": "^[A-Za-z0-9_\\-]{8,64}$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "session_id": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9_\\-.:]{1,128}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Conversation thread",
+      "title": "Session Id"
+    },
+    "timeout_s": {
+      "default": 120.0,
+      "exclusiveMinimum": 0,
+      "maximum": 3600,
+      "title": "Timeout S",
+      "type": "number"
+    },
+    "user_id": {
+      "default": "platform",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "deployment",
+    "messages"
+  ],
+  "title": "RunRequest",
+  "type": "object"
+}

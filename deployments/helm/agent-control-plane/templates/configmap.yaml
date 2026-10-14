@@ -1,0 +1,34 @@
+{{- $c := .Values.controlPlane -}}
+{{- if not $c.managedNamespaces }}{{ fail "controlPlane.managedNamespaces is required" }}{{ end -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "acp.fullname" . }}
+  labels: {{- include "acp.labels" . | nindent 4 }}
+data:
+  ACP_ENVIRONMENT: {{ $c.environment | quote }}
+  ACP_PUBLIC_URL: {{ required "controlPlane.publicUrl is required" $c.publicUrl | quote }}
+  ACP_PLATFORM_NAMESPACE: {{ $c.platformNamespace | quote }}
+  ACP_MANAGED_NAMESPACES: {{ $c.managedNamespaces | toJson | quote }}
+  ACP_RECONCILE_INTERVAL_S: {{ $c.reconcileIntervalSeconds | quote }}
+  ACP_LEASE_TTL_S: {{ $c.leaseTtlSeconds | quote }}
+  ACP_KUBE_MODE: in-cluster
+  ACP_OPERATOR_ISSUER: {{ required "controlPlane.operator.issuer is required" $c.operator.issuer | quote }}
+  ACP_OPERATOR_AUDIENCE: {{ required "controlPlane.operator.audience is required" $c.operator.audience | quote }}
+  ACP_OPERATOR_JWKS_URL: {{ required "controlPlane.operator.jwksUrl is required" $c.operator.jwksUrl | quote }}
+  ACP_OPERATOR_ROLES_CLAIM: {{ $c.operator.rolesClaim | quote }}
+  ACP_AUDIT_KEY_FILE: {{ printf "/etc/acp/keys/%s" (required "secrets.auditKeyFile is required" .Values.secrets.auditKeyFile) | quote }}
+  ACP_BUNDLE_KEY_FILE: {{ printf "/etc/acp/keys/%s" (required "secrets.bundleKeyFile is required" .Values.secrets.bundleKeyFile) | quote }}
+  ACP_LOG_LEVEL: {{ $c.logLevel | quote }}
+  {{- with $c.otlpEndpoint }}
+  ACP_OTLP_ENDPOINT: {{ . | quote }}
+  {{- end }}
+  {{- if $c.fabric.enabled }}
+  ACP_FABRIC_URL: {{ required "controlPlane.fabric.url is required when fabric.enabled" $c.fabric.url | quote }}
+  ACP_FABRIC_TRUST_DOMAIN: {{ required "controlPlane.fabric.trustDomain is required when fabric.enabled" $c.fabric.trustDomain | quote }}
+  ACP_FABRIC_WORKLOAD_AUDIENCE: {{ $c.fabric.workloadAudience | quote }}
+  ACP_CLUSTER_OIDC_ISSUER: {{ required "controlPlane.fabric.clusterOidcIssuer is required when fabric.enabled" $c.fabric.clusterOidcIssuer | quote }}
+  ACP_FABRIC_ADMIN_TOKEN_URL: {{ required "controlPlane.fabric.adminTokenUrl is required when fabric.enabled" $c.fabric.adminTokenUrl | quote }}
+  ACP_FABRIC_ADMIN_CLIENT_ID: {{ required "controlPlane.fabric.adminClientId is required when fabric.enabled" $c.fabric.adminClientId | quote }}
+  ACP_FABRIC_ADMIN_SCOPE: {{ $c.fabric.adminScope | quote }}
+  {{- end }}

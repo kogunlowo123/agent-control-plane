@@ -1,0 +1,135 @@
+# Control-plane authorization policy (agentic-core PolicySet).
+# Combining: deny overrides, then require_approval, then allow; default deny.
+#
+# Subjects
+#   Operators and pipelines authenticate with the enterprise IdP; their
+#   roles claim becomes subject.roles. When agent-identity-fabric is not
+#   configured, agents calling MCP/A2A/runtime endpoints are decided by
+#   this policy on their IdP roles as well.
+# Resource attributes set by the control plane
+#   risk (1 LOW .. 4 CRITICAL), environment, submitted_by, created_by,
+#   engaged_by, approvals (count), unrestricted_egress, scope.
+name: agent-control-plane
+version: "2026.10.0"
+rules:
+  # ------------------------------------------------ separation of duties
+  - id: deny-self-approval-of-registry-items
+    description: Whoever submitted a version for review cannot approve it.
+    effect: deny
+    actions: ["controlplane:registry:approve"]
+    conditions:
+      - {attribute: resource.submitted_by, operator: eq_attr, value: subject.id}
+
+  - id: deny-self-approval-of-deployments
+    description: Whoever requested a deployment change cannot approve it.
+    effect: deny
+    actions: ["controlplane:deployment:approve"]
+    conditions:
+      - {attribute: resource.created_by, operator: eq_attr, value: subject.id}
+
+  - id: deny-self-release-of-kill-switch
+    description: A kill switch is released by someone other than the person who engaged it.
+    effect: deny
+    actions: ["controlplane:killswitch:release"]
+    conditions:
+      - {attribute: resource.engaged_by, operator: eq_attr, value: subject.id}
+
+  - id: deny-unrestricted-egress-for-high-risk
+    description: High and critical risk agents may not be approved with egress to 0.0.0.0/0 or ::/0.
+    effect: deny
+    actions: ["controlplane:registry:approve"]
+    resource_types: ["agent_version"]
+    conditions:
+      - {attribute: resource.risk, operator: gte, value: 3}
+      - {attribute: resource.unrestricted_egress, operator: eq, value: true}
+
+  # ------------------------------------------------ human approval gates
+  - id: two-person-approval-for-high-risk
+    description: High and critical risk versions need two distinct approvers.
+    effect: require_approval
+    actions: ["controlplane:registry:approve"]
+    conditions:
+      - {attribute: resource.risk, operator: gte, value: 3}
+      - {attribute: resource.approvals, operator: lt, value: 1}
+
+  - id: approve-high-risk-production-deployments
+    description: Production changes to high and critical risk agents need an approver.
+    effect: require_approval
+    actions: ["controlplane:deployment:apply"]
+    conditions:
+      - {attribute: resource.environment, operator: eq, value: production}
+      - {attribute: resource.risk, operator: gte, value: 3}
+
+  # ------------------------------------------------ operator permissions
+  - id: allow-registry-authoring
+    effect: allow
+    actions: ["controlplane:registry:write", "controlplane:registry:submit"]
+    conditions:
+      - {attribute: subject.roles, operator: contains_any, value: [acp-agent-developer, acp-platform-admin]}
+
+  - id: allow-registry-review
+    effect: allow
+    actions: ["controlplane:registry:approve", "controlplane:registry:reject"]
+    conditions:
+      - {attribute: subject.roles, operator: contains_any, value: [acp-approver]}
+
+  - id: allow-registry-lifecycle
+    effect: allow
+    actions: ["controlplane:registry:deprecate", "controlplane:registry:retire"]
+    conditions:
+      - {attribute: subject.roles, operator: contains_any, value: [acp-approver, acp-platform-admin]}
+
+  - id: allow-bundle-publication
+    effect: allow
+    actions: ["controlplane:bundle:publish"]
+    conditions:
+      - {attribute: subject.roles, operator: contains_any, value: [acp-policy-author]}
+
+  - id: allow-deployment-changes
+    effect: allow
+    actions: ["controlplane:deployment:apply", "controlplane:deployment:delete", "controlplane:deployment:reconcile"]
+    conditions:
+      - {attribute: subject.roles, operator: contains_any, value: [acp-deployer, acp-platform-admin]}
+
+  - id: allow-deployment-approval
+    effect: allow
+    actions: ["controlplane:deployment:approve"]
+    conditions:
+      - {attribute: subject.roles, operator: contains_any, value: [acp-approver]}
+
+  - id: allow-kill-switch-engagement
+    description: Stopping agents is never gated on approval.
+    effect: allow
+    actions: ["controlplane:killswitch:engage"]
+    conditions:
+      - {attribute: subject.roles, operator: contains_any, value: [acp-security-officer, acp-platform-admin, acp-security-automation]}
+
+  - id: allow-kill-switch-release
+    effect: allow
+    actions: ["controlplane:killswitch:release"]
+    conditions:
+      - {attribute: subject.roles, operator: contains_any, value: [acp-security-officer]}
+
+  - id: allow-read
+    effect: allow
+    actions:
+      - controlplane:registry:read
+      - controlplane:bundle:read
+      - controlplane:deployments:read
+      - controlplane:killswitch:read
+    conditions:
+      - {attribute: subject.roles, operator: contains_any, value: [acp-auditor, acp-agent-developer, acp-approver, acp-deployer, acp-platform-admin, acp-policy-author, acp-security-officer, acp-agent-reader]}
+
+  - id: allow-audit-read
+    effect: allow
+    actions: ["controlplane:audit:read"]
+    conditions:
+      - {attribute: subject.roles, operator: contains_any, value: [acp-auditor, acp-security-officer]}
+
+  # ------------------------------------------------ agent callers (local mode)
+  - id: allow-agent-runtime-status
+    description: Agent runtimes check whether they may run.
+    effect: allow
+    actions: ["controlplane:runtime:status"]
+    conditions:
+      - {attribute: subject.roles, operator: contains_any, value: [acp-agent-runtime, acp-platform-admin]}

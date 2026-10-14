@@ -1,0 +1,126 @@
+{
+  "$defs": {
+    "Framework": {
+      "description": "Agent frameworks with a platform run-contract adapter (agent_control_plane.adapters).",
+      "enum": [
+        "langgraph",
+        "crewai",
+        "autogen",
+        "google_adk",
+        "microsoft_agent_framework",
+        "aws_strands"
+      ],
+      "title": "Framework",
+      "type": "string"
+    },
+    "RunStatus": {
+      "enum": [
+        "completed",
+        "interrupted",
+        "blocked",
+        "failed",
+        "timed_out"
+      ],
+      "title": "RunStatus",
+      "type": "string"
+    },
+    "Usage": {
+      "properties": {
+        "input_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Input Tokens",
+          "type": "integer"
+        },
+        "output_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Output Tokens",
+          "type": "integer"
+        }
+      },
+      "title": "Usage",
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/kogunlowo123/agent-control-plane/schemas/run.result.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "deployment": {
+      "title": "Deployment",
+      "type": "string"
+    },
+    "duration_ms": {
+      "minimum": 0,
+      "title": "Duration Ms",
+      "type": "number"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    },
+    "findings": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "framework": {
+      "$ref": "#/$defs/Framework"
+    },
+    "output": {
+      "default": "",
+      "title": "Output",
+      "type": "string"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "started_at": {
+      "format": "date-time",
+      "title": "Started At",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/RunStatus"
+    },
+    "stop_reason": {
+      "default": "",
+      "title": "Stop Reason",
+      "type": "string"
+    },
+    "tool_calls": {
+      "default": 0,
+      "title": "Tool Calls",
+      "type": "integer"
+    },
+    "usage": {
+      "$ref": "#/$defs/Usage",
+      "default": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      }
+    }
+  },
+  "required": [
+    "run_id",
+    "deployment",
+    "framework",
+    "status",
+    "started_at",
+    "duration_ms"
+  ],
+  "title": "RunResult",
+  "type": "object"
+}

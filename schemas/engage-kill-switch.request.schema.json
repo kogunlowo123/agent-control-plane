@@ -1,0 +1,41 @@
+{
+  "$defs": {
+    "KillScope": {
+      "enum": [
+        "global",
+        "agent",
+        "deployment"
+      ],
+      "title": "KillScope",
+      "type": "string"
+    }
+  },
+  "$id": "https://github.com/kogunlowo123/agent-control-plane/schemas/engage-kill-switch.request.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "reason": {
+      "maxLength": 500,
+      "minLength": 5,
+      "title": "Reason",
+      "type": "string"
+    },
+    "scope": {
+      "$ref": "#/$defs/KillScope"
+    },
+    "target": {
+      "description": "'*' for global, namespace/name for an agent, deployment name",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Target",
+      "type": "string"
+    }
+  },
+  "required": [
+    "scope",
+    "target",
+    "reason"
+  ],
+  "title": "EngageKillSwitch",
+  "type": "object"
+}

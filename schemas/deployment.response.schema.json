@@ -1,0 +1,395 @@
+{
+  "$defs": {
+    "Approval": {
+      "properties": {
+        "actor": {
+          "title": "Actor",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "title": "At",
+          "type": "string"
+        },
+        "comment": {
+          "default": "",
+          "title": "Comment",
+          "type": "string"
+        },
+        "policy_digest": {
+          "default": "",
+          "title": "Policy Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actor",
+        "at"
+      ],
+      "title": "Approval",
+      "type": "object"
+    },
+    "BundleRef": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 23,
+          "minLength": 5,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "BundleRef",
+      "type": "object"
+    },
+    "DeploymentSpec": {
+      "description": "Desired state of one agent deployment in one Kubernetes namespace.",
+      "properties": {
+        "agent_name": {
+          "title": "Agent Name",
+          "type": "string"
+        },
+        "agent_namespace": {
+          "title": "Agent Namespace",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "current": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Revision"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "environment": {
+          "$ref": "#/$defs/Environment"
+        },
+        "identity_uri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Identity Uri"
+        },
+        "name": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Kubernetes namespace the agent runs in",
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Namespace",
+          "type": "string"
+        },
+        "pending": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Revision"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "state": {
+          "$ref": "#/$defs/DeploymentState"
+        },
+        "superseded_identities": {
+          "default": [],
+          "description": "Identities of replaced versions, revoked once the rollout is available",
+          "items": {
+            "type": "string"
+          },
+          "title": "Superseded Identities",
+          "type": "array"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "agent_namespace",
+        "agent_name",
+        "environment",
+        "namespace",
+        "state",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "DeploymentSpec",
+      "type": "object"
+    },
+    "DeploymentState": {
+      "enum": [
+        "pending_approval",
+        "active",
+        "deleting",
+        "deleted"
+      ],
+      "title": "DeploymentState",
+      "type": "string"
+    },
+    "DeploymentStatus": {
+      "properties": {
+        "corrected": {
+          "default": false,
+          "title": "Corrected",
+          "type": "boolean"
+        },
+        "desired_replicas": {
+          "default": 0,
+          "title": "Desired Replicas",
+          "type": "integer"
+        },
+        "drift": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/DriftItem"
+          },
+          "title": "Drift",
+          "type": "array"
+        },
+        "killed_by": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Killed By",
+          "type": "array"
+        },
+        "message": {
+          "default": "",
+          "title": "Message",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "observed_generation": {
+          "default": 0,
+          "title": "Observed Generation",
+          "type": "integer"
+        },
+        "phase": {
+          "$ref": "#/$defs/Phase"
+        },
+        "ready_replicas": {
+          "default": 0,
+          "title": "Ready Replicas",
+          "type": "integer"
+        },
+        "reconciled_at": {
+          "format": "date-time",
+          "title": "Reconciled At",
+          "type": "string"
+        },
+        "spec_hash": {
+          "default": "",
+          "title": "Spec Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "phase",
+        "reconciled_at"
+      ],
+      "title": "DeploymentStatus",
+      "type": "object"
+    },
+    "DriftItem": {
+      "properties": {
+        "actual": {
+          "default": null,
+          "title": "Actual"
+        },
+        "change": {
+          "description": "missing | changed | unexpected | absent",
+          "title": "Change",
+          "type": "string"
+        },
+        "expected": {
+          "default": null,
+          "title": "Expected"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "path",
+        "change"
+      ],
+      "title": "DriftItem",
+      "type": "object"
+    },
+    "Environment": {
+      "enum": [
+        "development",
+        "staging",
+        "production"
+      ],
+      "title": "Environment",
+      "type": "string"
+    },
+    "Phase": {
+      "enum": [
+        "PendingApproval",
+        "Progressing",
+        "Available",
+        "Killed",
+        "Degraded",
+        "Deleted"
+      ],
+      "title": "Phase",
+      "type": "string"
+    },
+    "Revision": {
+      "description": "One desired-state revision of a deployment.",
+      "properties": {
+        "approvals": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Approval"
+          },
+          "title": "Approvals",
+          "type": "array"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "created_by": {
+          "title": "Created By",
+          "type": "string"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Env",
+          "type": "object"
+        },
+        "generation": {
+          "minimum": 1,
+          "title": "Generation",
+          "type": "integer"
+        },
+        "ingress_namespaces": {
+          "default": [],
+          "items": {
+            "maxLength": 40,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Ingress Namespaces",
+          "type": "array"
+        },
+        "policy_bundle": {
+          "$ref": "#/$defs/BundleRef"
+        },
+        "replicas": {
+          "maximum": 50,
+          "minimum": 0,
+          "title": "Replicas",
+          "type": "integer"
+        },
+        "service_account_annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Service Account Annotations",
+          "type": "object"
+        },
+        "version": {
+          "maxLength": 23,
+          "minLength": 5,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "generation",
+        "version",
+        "replicas",
+        "policy_bundle",
+        "created_by",
+        "created_at"
+      ],
+      "title": "Revision",
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/kogunlowo123/agent-control-plane/schemas/deployment.response.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "deployment": {
+      "$ref": "#/$defs/DeploymentSpec"
+    },
+    "outcome": {
+      "description": "applied | approval_required | deleting",
+      "title": "Outcome",
+      "type": "string"
+    },
+    "status": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DeploymentStatus"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "outcome",
+    "deployment"
+  ],
+  "title": "DeploymentResult",
+  "type": "object"
+}
